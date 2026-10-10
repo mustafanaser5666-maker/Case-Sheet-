@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en" dir="ltr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Case Sheet</title><meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#0f766e">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Case Sheet">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" type="image/png" href="/icon-192.png">
+<link rel="apple-touch-icon" href="/maskable-512.png">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f4f6f5;--card:#fff;--ink:#0e2a2b;--mut:#5b7270;--line:#cfdbd8;--pri:#0f766e;font-family:'Cairo',system-ui,'Segoe UI',Tahoma,sans-serif}
+@media(prefers-color-scheme:dark){:root{--bg:#0b1514;--card:#13211f;--ink:#e6f0ee;--mut:#8fa9a5;--line:#294541;--pri:#2fb5a8}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);font-size:16px;line-height:1.45}
+.bar{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding:8px 10px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.bar b{font-size:18px;margin-inline-end:auto}
+button,select,input,textarea{font:inherit;color:inherit}
+button,.bar select{min-height:44px;padding:0 12px;border-radius:10px;border:1.5px solid var(--line);background:var(--card)}
+button.p{background:var(--pri);color:#fff;border-color:var(--pri);font-weight:600}
+main{max-width:760px;margin:0 auto;padding:10px}
+.sec{background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:10px 12px;margin-bottom:10px}
+.sec h2{font-size:15px;margin:0 0 8px;color:var(--pri);text-transform:uppercase;letter-spacing:.3px;border-bottom:2px solid var(--pri);padding-bottom:3px}
+.g{display:grid;grid-template-columns:1fr 1fr;gap:8px}.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.f{display:block;margin-bottom:6px}.f.w{grid-column:1/-1}.f span{display:block;font-size:12.5px;color:var(--mut);font-weight:600}
+input[type=text],input:not([type]),input[type=date],input[type=number],input[type=datetime-local],select,textarea{width:100%;min-height:44px;padding:8px 10px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);font-size:16px}
+textarea{resize:none;overflow:hidden}
+.chips{display:flex;flex-wrap:wrap;gap:6px}.chip{display:flex;align-items:center;gap:6px;padding:6px 10px;border:1.5px solid var(--line);border-radius:999px;font-size:14px;color:var(--ink)}.chip input{width:20px;height:20px;accent-color:var(--pri)}
+.ga{padding:8px 10px;border-radius:10px;background:var(--bg);min-height:40px;font-weight:600}
+.rf{display:inline-block;font-size:11px;font-weight:700;background:#c62828;color:#fff;border-radius:6px;padding:0 6px;margin-inline-end:2px}#flb{display:none;margin:8px 10px 0;padding:8px 12px;border:1.5px solid #c62828;border-radius:12px;background:rgba(198,40,40,.12);font-size:14px;max-width:760px;margin-inline:auto}
+.note{color:var(--mut);font-size:12px;text-align:center;padding:6px 14px 40px}
+.toast{position:fixed;inset-inline:16px;bottom:20px;background:var(--ink);color:var(--bg);padding:10px;border-radius:10px;text-align:center}
+@media print{.bar,.toast{display:none}body{background:#fff;color:#000}.sec{break-inside:avoid;border-color:#999}textarea,input,select{border:0;background:none;min-height:0;padding:0}}
+</style></head><body>
+<div class="bar"><b>🩺 Case Sheet</b>
+<select id="sp"></select><select id="cs"></select>
+<button id="nw">＋</button><button id="dl">🗑</button><button id="cp" class="p"></button><button id="pr"></button><button id="lg">ع</button><button id="ins" hidden>⬇</button></div>
+<div id="flb"></div><main id="form"></main>
+<p class="note" id="nt"></p>
+<script>
+const M={};
+const ld=(k,d)=>{try{const v=localStorage.getItem('cs_'+k);return v?JSON.parse(v):d}catch(e){return k in M?M[k]:d}};
+const sv=(k,v)=>{try{localStorage.setItem('cs_'+k,JSON.stringify(v))}catch(e){M[k]=v}};
+let lang=ld('lang','en'),cases=ld('cases',[]),cur=null,D={},sp='peds';
+const L=s=>{const p=String(s).split('|');return lang==='ar'&&p[1]?p[1]:p[0]};
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const UI={copy:['Copy','نسخ'],pdf:['PDF','PDF'],nw:['New case','حالة جديدة'],copied:['Copied','انتسخ'],nt:['Decision-support only. Verify against current guidelines.','أداة مساندة فقط. راجع الإرشادات الحديثة.'],sel:['— Saved cases —','— الحالات المحفوظة —']};
+const U=k=>UI[k][lang==='ar'?1:0];
+const SX=['Male|ذكر','Female|أنثى'];
+const SYS=[['cvs','CVS|القلب'],['rs','Respiratory|الصدر'],['git','GIT|الهضمي'],['gut','GUT|البولي'],['cns','CNS|الأعصاب'],['msk','MSK|العضلات والعظام'],['endo','Endocrine|الغدد'],['skin','Skin|الجلد'],['ent','ENT / Eye|أنف أذن حنجرة / عين'],['psy','Psychiatric|نفسي']];
+const demo=p=>['Patient data|بيانات المريض',[['name','Name|الاسم'],['fno','File no.|رقم الملف'],['dob','DOB|تاريخ الميلاد','d'],['age','Age|العمر'],['sex','Sex|الجنس','s',SX],['addr','Address|العنوان'],['occ',p?'Parents\u2019 occupation|مهنة الوالدين':'Occupation|المهنة'],['inf','Informant|المخبر'],['rel','Reliability|الموثوقية','s',['Reliable|موثوق','Unreliable|غير موثوق']],['dt','Date / time|التاريخ والوقت','l'],['ward','Ward / clinic|الردهة / العيادة'],['dr','Doctor|الطبيب']],'g'];
+const CC=['Chief complaint & duration|الشكوى الرئيسية والمدة',[['cc','Complaint (patient\u2019s words)|الشكوى بكلمات المريض','a'],['dur','Duration|المدة']]];
+const HPI=['History of presenting complaint|تاريخ الشكوى الحالية',[['hpi','History (onset, course, severity, site/radiation, associated, aggravating/relieving, previous episodes)|التاريخ (البداية، المسار، الشدة، الموقع، المصاحبة، المفاقمة والمخففة، نوبات سابقة)','A']]];
+const HX=['Past, drug, family & social history|التاريخ السابق والدوائي والعائلي والاجتماعي',[['pmh','Past medical / surgical / hospitalizations / transfusion|التاريخ المرضي والجراحي / الدخول / نقل الدم','a'],['drug','Drugs (dose, duration) & OTC/herbal|الأدوية والجرعات والأعشاب','a'],['alg','Allergy & reaction|الحساسية ونوعها'],['fam','Family history / consanguinity|التاريخ العائلي / القرابة','a'],['soc','Social: smoking, alcohol, living conditions, support|الاجتماعي: تدخين، كحول، السكن، الدعم','a']]];
+const SR=['Systems review|مراجعة الأجهزة',SYS.map(s=>['sr_'+s[0],s[1]]).concat([['sr_neg','Others negative|الباقي سلبي','c',['Yes|نعم']]]),'g'];
+const VIT=['Examination|الفحص',[['hr','HR|النبض','n'],['rr','RR|التنفس','n'],['bp','BP|الضغط'],['t','Temp °C|الحرارة','n'],['sp2','SpO₂ %|التشبع','n'],['wt','Weight kg|الوزن','n'],['ht','Height cm|الطول','n'],['gen','General (pallor, jaundice, cyanosis, edema, nodes)|عام (شحوب، يرقان، زرقة، وذمة، عقد)','a'],['ecvs','CVS|القلب','a'],['ers','Chest|الصدر','a'],['eab','Abdomen|البطن','a'],['ecns','CNS|الأعصاب','a'],['eoth','Other|أخرى','a']],'g3'];
+const END=['Diagnosis, investigations & plan|التشخيص والفحوصات والخطة',[['dx','Provisional diagnosis|التشخيص المبدئي','a'],['ddx','Differential|التفريقي','a'],['ix','Investigations|الفحوصات','a'],['plan','Plan / treatment|الخطة والعلاج','A'],['sg','Safeguarding / capacity / consent|الحماية / الأهلية / الموافقة','a']]];
+const SPEC={
+peds:['Pediatrics|الأطفال',[demo(1),CC,HPI,
+['Birth & feeding|الولادة والتغذية',[['ante','Antenatal course|الحمل'],['ga','GA (wk)|عمر الحمل','n'],['mode','Mode of delivery|نوع الولادة','s',['SVD|طبيعية','C-section|قيصرية','Assisted|مساعدة']],['bw','Birth weight kg|وزن الولادة','n'],['apg','Apgar|أبغار'],['nicu','NICU / jaundice / vit K|وحدة الحديثي / يرقان / فيتامين K'],['feed','Feeding (breast/formula/weaning)|التغذية (رضاعة/صناعي/فطام)','a']],'g'],
+['Growth & development|النمو والتطور',[['gm','Gross motor|الحركة الكبرى'],['fm','Fine motor|الحركة الدقيقة'],['lang','Language|اللغة'],['soc2','Social|الاجتماعي'],['dev','Concerns / regression|ملاحظات / تراجع'],['grw','Weight / length / HC percentile (WHO)|الوزن / الطول / الرأس (WHO)']],'g'],
+['Immunization (Iraq EPI) & infections|التلقيح والأخماج',[['imm','Vaccines given / missed (card seen?)|اللقاحات المعطاة / الناقصة (الكارت؟)','a'],['inf2','Previous infections|أخماج سابقة'],['sch','School & sleep|المدرسة والنوم']]],
+['Fever <5 y / sepsis / dehydration|حمى / إنتان / جفاف',[['tl','Traffic light: colour, activity, resp, hydration, other|إشارة المرور','c',['Red feature|علامة حمراء','Amber feature|علامة برتقالية']],['tlt','Details|تفاصيل','a'],['dh','Dehydration signs|علامات الجفاف','a']]],
+HX,SR,VIT,END]],
+med:['Internal Medicine|الباطنية',[demo(),CC,HPI,
+['Symptom focus|تركيز الأعراض',[['mod','Module|الوحدة','c',['Chest pain|ألم صدر','Dyspnea|ضيق نفس','Palpitations|خفقان','Syncope|إغماء','Abdominal pain|ألم بطن','Jaundice|يرقان','Headache|صداع','Weight loss|نقص وزن','Fever|حمى','Edema|وذمة']],['modd','Module details|تفاصيل الوحدة','A']]],
+['Risk factors|عوامل الخطر',[['rf','Risk factors|عوامل الخطر','c',['HTN|ضغط','DM|سكري','Lipids|دهون','Smoking|تدخين','FH premature CAD|قلب مبكر عائلي','CKD|كلى','Thyroid|درقية','TB contact|مخالطة سل']],['trv','Travel history|السفر']]],
+HX,SR,VIT,END]],
+gyn:['Gynecology|النسائية',[demo(),CC,HPI,
+['Menstrual history|التاريخ الطمثي',[['mnc','Menarche (age)|البلوغ','n'],['lmp','LMP|آخر دورة','d'],['cyc','Cycle (days)|الدورة','n'],['dur2','Duration (days)|المدة','n'],['flow','Flow: pads/day, clots, flooding|الغزارة: فوط، خثرات، فيضان'],['imb','IMB / PCB / dysmenorrhea|نزف بين الدورتين/بعد الجماع/ألم'],['mp','Menopause (age, symptoms, PMB)|سن اليأس']],'g'],
+['Sexual, contraceptive & gyn history|الجنسي ومنع الحمل والنسائي',[['sex2','Sexual / contraception / STI risk|جنسي / منع حمل / عدوى','a'],['cx','Cervical screening|مسحة العنق'],['dis','Discharge / pelvic pain / dyspareunia|إفراز / ألم حوض / ألم جماع'],['ur','Urinary / prolapse symptoms|بولي / هبوط'],['fert','Fertility history|الخصوبة'],['obh','Obstetric history|التوليدي','a']],'g'],
+HX,SR,VIT,['Gyn examination|الفحص النسائي',[['eabd','Abdominal|بطني','a'],['espec','Speculum|منظار','a'],['ebim','Bimanual|يدوي','a']]],END]],
+obs:['Obstetrics|التوليد',[demo(),CC,
+['Obstetric data|البيانات التوليدية',[['mode2','Visit|الزيارة','s',['Antenatal|رعاية الحمل','Intrapartum|مخاض','Postnatal|نفاس']],['gpa','G P A L|G P A L'],['lmp','LMP|آخر دورة','d'],['scan','EDD by scan|EDD بالسونار','d'],['ga','','ga']],'g'],
+['Previous pregnancies|الحمول السابقة',[['prev','Pregnancies (year · mode · outcome · weight · complications)|الحمول (السنة · النوع · النتيجة · الوزن · المضاعفات)','A']]],
+['Current pregnancy|الحمل الحالي',[['book','Booking visit / scans|التسجيل / السونار','a'],['bl','Bloods: Hb, group/Rh, HBsAg, HIV, syphilis, rubella, GTT|التحاليل','a'],['bpu','BP trend & urine protein|الضغط والبروتين','a'],['fh','Fundal height / fetal movements / presentation|ارتفاع القاع / الحركة / الوضعية','a'],['risk','Risk: pre-eclampsia, GDM, VTE, previous C-section/stillbirth/preterm|الخطورة','a'],['dgr','Danger signs|علامات الخطر','c',['Bleeding|نزف','Headache|صداع','Visual disturbance|اضطراب رؤية','Epigastric pain|ألم شرسوفي','Reduced fetal movements|نقص حركة','Leaking fluid|تسرب سائل']],['lab','Labour / postnatal notes|المخاض / النفاس','a']]],
+HX,SR,VIT,['Obstetric examination|الفحص التوليدي',[['eabd','Abdominal / lie / presentation / FHR|بطني / وضعية / نبض الجنين','a'],['evx','Pelvic / VE|مهبلي','a']]],END]],
+surg:['Surgery|الجراحة',[demo(),CC,HPI,
+['Surgical history|التاريخ الجراحي',[['pain','Pain (SOCRATES) / GI / bowel habit / bleeding PR|الألم / الهضمي / الإخراج / نزف شرجي','a'],['lump','Lump: site, size, change, pain, reducible|الكتلة','a'],['trm','Trauma mechanism / head injury|آلية الرض','a'],['ops','Previous operations & anaesthesia complications|عمليات سابقة ومضاعفات التخدير','a'],['bld','Bleeding / clotting / anticoagulants|النزف / التخثر / مميعات','a'],['fast','Fasting status|الصيام']]],
+HX,SR,VIT,['Surgical & pre-op|الجراحي وقبل العملية',[['eabd2','Abdomen / hernia / DRE / lump exam|بطن / فتق / شرجي / كتلة','a'],['asa','ASA grade|ASA'],['air','Airway|مجرى الهواء'],['vte','VTE risk / consent|الخثار / الموافقة']]],END]]
+};
+const RF={
+peds:['Pale / mottled / ashen / blue|شاحب / متبقع / رمادي|NG143','No response to social cues / appears ill|لا يستجيب / يبدو مريضاً|NG143','Weak, high-pitched or continuous cry|بكاء ضعيف أو حاد أو متواصل|NG143','Grunting / chest indrawing|أنين / انسحاب صدري|NG143','Non-blanching rash|طفح لا يبيض|NG143','Bulging fontanelle / neck stiffness|يافوخ منتفخ / تيبس رقبة|NG143','Fever ≥5 days / limb swelling|حمى ≥5 أيام / تورم طرف|NG143','Sepsis: SpO₂ <90, mottled, CRT ≥3 s, apnoea|إنتان: تشبع <90، CRT ≥3، توقف تنفس|NG51','Neonate: GBS / PROM / maternal fever|وليد: GBS / انفجار أغشية / حمى الأم|NG195','Jaundice <24 h of life|يرقان خلال 24 ساعة|NG98','Severe dehydration|جفاف شديد|CG84','Features of non-accidental injury|مؤشرات إساءة|CG89'],
+med:['Sepsis: new confusion, RR ≥25, SBP ≤90, no urine 18 h|إنتان: ارتباك، تنفس ≥25، ضغط ≤90، لا بول|NG51','Chest pain now / last 12 h, pressure, radiation, sweating|ألم صدر حالي / آخر 12 ساعة، ضغط، انتشار، تعرق|NG185','Suspected cancer: dysphagia, weight loss, hemoptysis, rectal bleeding|اشتباه سرطان: عسر بلع، نقص وزن، نفث دم، نزف شرجي|NG12','AKI risk: CKD, nephrotoxics, dehydration, sepsis|خطر AKI|NG148','VTE risk / unilateral leg swelling|خطر خثار / تورم ساق|NG89','Thunderclap headache|صداع رعدي|NG228','Fever + neck stiffness / non-blanching rash|حمى + تيبس رقبة / طفح|NG240'],
+gyn:['Heavy menstrual bleeding (flooding, clots, anaemia)|نزف طمث غزير|NG88','Postmenopausal bleeding|نزف بعد سن اليأس|NG12','Persistent intermenstrual / postcoital bleeding|نزف مستمر بين الدورتين / بعد الجماع|NG12','Pelvic mass / abnormal cervix|كتلة حوضية / عنق غير طبيعي|NG12','Chronic pelvic pain, deep dyspareunia, cyclical GI/urinary|ألم حوض مزمن، ألم جماع عميق|NG73','Menopause <45 y|انقطاع طمث قبل 45|NG23','PID features (pain, discharge, fever, CMT)|التهاب حوض|CKS-PID'],
+obs:['BP ≥140/90 or proteinuria|ضغط ≥140/90 أو بروتين|NG133','Severe headache / visual disturbance / epigastric pain|صداع شديد / رؤية / ألم شرسوفي|NG133','Reduced / absent fetal movements|نقص حركة الجنين|NG201','Vaginal bleeding|نزف مهبلي|NG201','Previous C-section / stillbirth / preterm|قيصرية / ولادة ميتة / مبكرة سابقة|NG201','GDM risk factors (BMI >30, previous GDM, FH, family origin)|عوامل سكري الحمل|NG3','VTE risk factors|عوامل خثار|NG89','Labour: meconium, abnormal FHR, fever, delay|مخاض: عقي، نبض جنين، حمى، تأخر|NG235','Postnatal: PPH, fever, calf pain, low mood|نفاس: نزف، حمى، ألم ساق، مزاج منخفض|NG194'],
+surg:['Rigid abdomen / bilious vomiting / absolute constipation|بطن صلب / إقياء أخضر / إمساك مطلق|Clinical','Head injury: GCS <13, seizure, >1 vomit, skull fracture|رض رأس: GCS <13، تشنج، إقياء، كسر جمجمة|NG232','Head injury + LOC with age ≥65 / anticoagulant|رض رأس + فقدان وعي مع عمر ≥65 / مميع|NG232','Suspected cancer: lump, dysphagia, rectal bleeding|اشتباه سرطان|NG12','VTE risk|خطر خثار|NG89','Difficult airway / malignant hyperthermia history|صعوبة تنبيب / فرط حرارة خبيث|Clinical','Sepsis / unstable|إنتان / عدم استقرار|NG51']};
+Object.keys(SPEC).forEach(k=>{const a=SPEC[k][1];a.splice(a.length-1,0,['Red flags (NICE reference)|علامات الإنذار (مرجع NICE)',[['rf','Tick any present|علّم الموجود','c',RF[k]]]])});
+const fresh=()=>({dt:new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,16),...(sp==='obs'||sp==='gyn'?{sex:'Female|أنثى'}:{})});
+function flags(){const f=[],n=k=>parseFloat(D[k]);(D.rf||[]).forEach(x=>f.push({t:L(x),r:x.split('|')[2]||''}));
+ if(sp==='peds'){const d=D.dob?(Date.now()-new Date(D.dob))/864e5:null;if(d!=null&&d<91&&n('t')>=38)f.push({t:'Infant <3 months, temp ≥38 °C',r:'NG143'});if(n('sp2')<90)f.push({t:'SpO₂ <90%',r:'NG51'});if(n('hr')>160&&d!=null&&d<365)f.push({t:'HR >160 (<1 y)',r:'NG51'})}
+ else{if(n('hr')>130)f.push({t:'HR >130',r:'NG51'});if(n('rr')>=25)f.push({t:'RR ≥25',r:'NG51'});if(parseInt(D.bp)<=90)f.push({t:'Systolic BP ≤90',r:'NG51'});if(n('sp2')<91)f.push({t:'SpO₂ <91%',r:'NG51'})}
+ return f}
+function showFlags(){const f=flags();flb.style.display=f.length?'block':'none';flb.innerHTML=f.length?'⚑ <b>'+f.length+'</b> — '+f.map(x=>`<span class="rf">${esc(x.r)}</span> ${esc(x.t)}`).join(' · '):''}
+const save=()=>{if(!cur)return;const o=cases.find(c=>c.id===cur);const r={id:cur,sp,D,t:Date.now()};o?Object.assign(o,r):cases.unshift(r);sv('cases',cases);lst()};
+let tm;const later=()=>{clearTimeout(tm);tm=setTimeout(save,500)};
+function fld(f){const [id,l,ty,o]=f,v=D[id]??'';
+ if(ty==='ga')return '<div class="f w"><span>EDD / GA</span><div class="ga" id="ga"></div></div>';
+ if(ty==='c')return `<div class="f w"><span>${esc(L(l))}</span><div class="chips">${o.map(x=>`<label class="chip"><input type="checkbox" data-k="${id}" data-c="${esc(x)}"${(v||[]).includes(x)?' checked':''}>${esc(L(x))}</label>`).join('')}</div></div>`;
+ let h;
+ if(ty==='a'||ty==='A')h=`<textarea data-k="${id}" rows="${ty==='A'?4:2}">${esc(v)}</textarea>`;
+ else if(ty==='s')h=`<select data-k="${id}"><option value=""></option>${o.map(x=>`<option value="${esc(x)}"${v===x?' selected':''}>${esc(L(x))}</option>`).join('')}</select>`;
+ else h=`<input data-k="${id}" type="${{d:'date',n:'number',l:'datetime-local'}[ty]||'text'}" value="${esc(v)}"${ty==='n'?' step="any" inputmode="decimal"':''}>`;
+ return `<label class="f${ty==='a'||ty==='A'?' w':''}"><span>${esc(L(l))}</span>${h}</label>`}
+function render(){document.documentElement.lang=lang;document.documentElement.dir=lang==='ar'?'rtl':'ltr';
+ document.getElementById('form').innerHTML=SPEC[sp][1].map(s=>`<section class="sec"><h2>${esc(L(s[0]))}</h2><div class="${s[2]||''}">${s[1].map(fld).join('')}</div></section>`).join('');
+ document.querySelectorAll('textarea').forEach(grow);ga();showFlags();
+ document.getElementById('sp').innerHTML=Object.entries(SPEC).map(([k,v])=>`<option value="${k}"${k===sp?' selected':''}>${esc(L(v[0]))}</option>`).join('');
+ cp.textContent=U('copy');pr.textContent=U('pdf');nw.title=U('nw');nt.textContent=U('nt');lg.textContent=lang==='ar'?'EN':'ع';lst()}
+function lst(){cs.innerHTML=`<option value="">${U('sel')}</option>`+cases.map(c=>`<option value="${c.id}"${c.id===cur?' selected':''}>${esc(c.D.name||'—')} · ${esc(L(SPEC[c.sp][0]))}</option>`).join('')}
+const grow=t=>{t.style.height='auto';t.style.height=t.scrollHeight+'px'};
+function ga(){const e=document.getElementById('ga');if(!e)return;if(!D.lmp&&!D.scan){e.textContent='—';return}const T=new Date();T.setHours(0,0,0,0);let edd,days;if(D.scan){edd=new Date(D.scan+'T00:00:00');days=280-Math.round((edd-T)/864e5)}else{const l=new Date(D.lmp+'T00:00:00');edd=new Date(l);edd.setDate(edd.getDate()+280);days=Math.round((T-l)/864e5)}e.textContent=`EDD ${edd.toLocaleDateString('en-GB')} · GA ${Math.floor(days/7)}+${days%7} wk`+(D.scan?' (scan)':' (Naegele)')}
+function age(){if(!D.dob)return;const d=Math.floor((Date.now()-new Date(D.dob))/864e5);D.age=d<28?d+' d':d<730?Math.floor(d/30.44)+' m':Math.floor(d/365.25)+' y '+Math.floor((d%365.25)/30.44)+' m';const a=document.querySelector('[data-k=age]');if(a)a.value=D.age}
+form.addEventListener('input',e=>{const k=e.target.dataset.k;if(!k)return;if(e.target.dataset.c){const a=D[k]||[],c=e.target.dataset.c;D[k]=e.target.checked?[...a,c]:a.filter(x=>x!==c)}else D[k]=e.target.value;if(e.target.tagName==='TEXTAREA')grow(e.target);if(k==='dob')age();if(k==='lmp'||k==='scan')ga();showFlags();if(!cur)cur=String(Date.now());later()});
+form.addEventListener('change',e=>{if(e.target.dataset.k==='dob'){age();later()}});
+function text(){const o=['CASE SHEET — '+L(SPEC[sp][0])];SPEC[sp][1].forEach(s=>{const r=[];s[1].forEach(f=>{const v=D[f[0]];const t=Array.isArray(v)?v.map(L).join(', '):v?L(v):'';if(t&&f[2]!=='ga')r.push(`  ${L(f[1]).split(/[(:]/)[0].trim()}: ${t}`)});if(r.length)o.push('',L(s[0]).toUpperCase(),...r)});const fg=flags();if(fg.length)o.splice(1,0,'','FLAGS: '+fg.map(x=>(x.r?'['+x.r+'] ':'')+x.t).join('; '));o.push('',U('nt'));return o.join('\n')}
+function toast(m){const d=document.createElement('div');d.className='toast';d.textContent=m;document.body.appendChild(d);setTimeout(()=>d.remove(),1800)}
+cp.onclick=async()=>{const t=text();try{await navigator.clipboard.writeText(t)}catch(e){const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy')}catch(x){}a.remove()}toast(U('copied'))};
+pr.onclick=()=>{document.querySelectorAll('textarea').forEach(grow);window.print()};
+lg.onclick=()=>{lang=lang==='ar'?'en':'ar';sv('lang',lang);render()};
+nw.onclick=()=>{cur=null;D=fresh();render()};
+dl.onclick=()=>{if(!cur||!confirm(lang==='ar'?'حذف هذي الحالة؟':'Delete this case?'))return;cases=cases.filter(c=>c.id!==cur);sv('cases',cases);nw.onclick()};
+document.getElementById('sp').onchange=e=>{sp=e.target.value;cur=null;D=fresh();render()};
+cs.onchange=e=>{const c=cases.find(x=>x.id===e.target.value);if(c){cur=c.id;sp=c.sp;D=c.D;render()}};
+let ip=null;
+const standalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+addEventListener('beforeinstallprompt',e=>{e.preventDefault();ip=e;ins.hidden=false});
+if(/iphone|ipad|ipod/i.test(navigator.userAgent)&&!standalone)ins.hidden=false;
+ins.onclick=async()=>{if(ip){ip.prompt();try{await ip.userChoice}catch(e){}ip=null;ins.hidden=true}else alert(lang==='ar'?'من Safari اضغط زر المشاركة ثم «إضافة إلى الشاشة الرئيسية»':'In Safari tap Share, then "Add to Home Screen"')};
+nw.onclick();
+if('serviceWorker' in navigator){const had=!!navigator.serviceWorker.controller;let rl=false;
+navigator.serviceWorker.addEventListener('controllerchange',()=>{if(rl||!had)return;rl=true;location.reload()});
+addEventListener('load',()=>navigator.serviceWorker.register('/sw.js',{scope:'/'}).catch(()=>{}))}
+</script></body></html>
